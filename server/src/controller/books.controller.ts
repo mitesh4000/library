@@ -8,7 +8,7 @@ import Book from "../model/book.model";
 
 export const addBook = async (req: authRequest, res: Response) => {
 	try {
-		console.log(req.file);
+		console.log("req.file here =>",req.file);
 		const validatedData = bookIputValidation.parse(req.body);
 		const newBook = new Book(validatedData);
 		newBook.userId = new ObjectId(req.userId);
@@ -36,14 +36,37 @@ export const addBook = async (req: authRequest, res: Response) => {
 export const listBooks = async (req: authRequest, res: Response) => {
 	const userId = req.userId;
 	console.log(userId);
+    const { page = 1, limit = 10, search = '' } = req.query;
+	
+console.log(req.query)
+
+const pageNumber = parseInt(page as string, 10);
+    const pageLimit = parseInt(limit as string, 10);
+
+    // Build the query
+    const query = {
+      name: { $regex: search, $options: 'i' },
+    };
+
 	try {
 		if (!userId) {
 			return res
 				.status(401)
 				.json(errorResponse("Unauthorized", "User not found"));
 		}
-		const projects = await Book.find({ isDeleted: false });
-		return res.status(200).json(projects);
+
+
+	 const query = {
+      $or: [
+        { title: { $regex: search, $options: 'i' } },
+        { author: { $regex: search, $options: 'i' } },
+      ],
+    };	
+ const results = await Book.find(query)
+      .limit(pageLimit)
+      .skip((pageNumber - 1) * pageLimit)
+      .exec();
+		return res.status(200).json(results);
 	} catch (error) {
 		console.error(error);
 		return res
